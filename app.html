@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conektar — Comprobantes SENASA</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --surface2: #222;
+      --border: #2a2a2a;
+      --accent: #c8a96e;
+      --accent-dim: rgba(200,169,110,0.12);
+      --text: #e8e4dc;
+      --muted: #666;
+      --success: #5a9e6f;
+      --error: #e07070;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at 10% 30%, rgba(200,169,110,0.04) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    /* Header */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 20px;
+      color: var(--accent);
+    }
+
+    .logo span {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      color: var(--muted);
+      margin-left: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 300;
+    }
+
+    .btn-logout {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-logout:hover { border-color: var(--muted); color: var(--text); }
+
+    /* Main */
+    main {
+      max-width: 680px;
+      margin: 60px auto;
+      padding: 0 20px;
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .page-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 32px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .page-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 48px;
+    }
+
+    /* Upload zones */
+    .uploads {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .upload-zone {
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      background: var(--surface);
+    }
+
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .upload-zone.filled {
+      border-color: var(--success);
+      border-style: solid;
+      background: rgba(90,158,111,0.08);
+    }
+
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .upload-icon {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .upload-label {
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .upload-hint {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .upload-filename {
+      font-size: 12px;
+      color: var(--success);
+      margin-top: 6px;
+      word-break: break-all;
+    }
+
+    /* Botón procesar */
+    .btn-procesar {
+      width: 100%;
+      background: var(--accent);
+      color: #0f0f0f;
+      border: none;
+      border-radius: 10px;
+      padding: 15px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.03em;
+    }
+
+    .btn-procesar:hover { opacity: 0.9; }
+    .btn-procesar:active { transform: scale(0.99); }
+    .btn-procesar:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Estado / progreso */
+    .status {
+      margin-top: 24px;
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-size: 13px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status.processing {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .status.success {
+      display: flex;
+      background: rgba(90,158,111,0.1);
+      border: 1px solid rgba(90,158,111,0.3);
+      color: #7ec49a;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .status.error {
+      display: flex;
+      background: rgba(220,80,80,0.08);
+      border: 1px solid rgba(220,80,80,0.25);
+      color: var(--error);
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .btn-download {
+      background: var(--success);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-download:hover { opacity: 0.85; }
+
+    /* Info box */
+    .info {
+      margin-top: 32px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .info strong { color: var(--text); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      Conektar <span>Automatización</span>
+    </div>
+    <form action="/logout" method="post" style="display:inline">
+      <button class="btn-logout" type="submit">Salir</button>
+    </form>
+  </header>
+
+  <main>
+    <div class="page-title">Comprobantes SENASA</div>
+    <div class="page-sub">Adjuntá el PDF de transferencias y el listado de TEFs para generar los comprobantes individuales.</div>
+
+    <div class="uploads">
+      <div class="upload-zone" id="zonePdf">
+        <input type="file" id="inputPdf" accept=".pdf">
+        <div class="upload-icon">📄</div>
+        <div class="upload-label">PDF de comprobantes</div>
+        <div class="upload-hint" id="hintPdf">Arrastrá o hacé click</div>
+        <div class="upload-filename" id="namePdf"></div>
+      </div>
+
+      <div class="upload-zone" id="zoneCsv">
+        <input type="file" id="inputCsv" accept=".csv">
+        <div class="upload-icon">📊</div>
+        <div class="upload-label">Listado de TEFs</div>
+        <div class="upload-hint" id="hintCsv">Arrastrá o hacé click</div>
+        <div class="upload-filename" id="nameCsv"></div>
+      </div>
+    </div>
+
+    <button class="btn-procesar" id="btnProcesar" disabled>Procesar comprobantes</button>
+
+    <div class="status processing" id="statusProcessing">
+      <div class="spinner"></div>
+      <span>Procesando páginas, esto puede tardar unos segundos...</span>
+    </div>
+
+    <div class="status success" id="statusSuccess">
+      <span id="successMsg">✅ Proceso completado</span>
+      <button class="btn-download" id="btnDownload">⬇ Descargar ZIP</button>
+    </div>
+
+    <div class="status error" id="statusError">
+      <span>❌ </span><span id="errorMsg"></span>
+    </div>
+
+    <div class="info">
+      <strong>Instrucciones:</strong><br>
+      1. Subí el archivo <strong>Comprobantes_de_Transferencias.pdf</strong><br>
+      2. Subí el <strong>listado de TEFs</strong> en formato CSV (separado por punto y coma)<br>
+      3. Hacé click en <strong>Procesar</strong> y esperá el resultado<br>
+      4. Descargá el ZIP con todos los comprobantes individuales nombrados por operación
+    </div>
+  </main>
+
+  <script>
+    const inputPdf = document.getElementById('inputPdf');
+    const inputCsv = document.getElementById('inputCsv');
+    const btnProcesar = document.getElementById('btnProcesar');
+    const zonePdf = document.getElementById('zonePdf');
+    const zoneCsv = document.getElementById('zoneCsv');
+
+    let zipBlob = null;
+
+    function checkReady() {
+      btnProcesar.disabled = !(inputPdf.files[0] && inputCsv.files[0]);
+    }
+
+    function setFile(input, zone, nameEl, hintEl) {
+      const file = input.files[0];
+      if (file) {
+        nameEl.textContent = file.name;
+        hintEl.style.display = 'none';
+        zone.classList.add('filled');
+      }
+      checkReady();
+    }
+
+    inputPdf.addEventListener('change', () => setFile(inputPdf, zonePdf, document.getElementById('namePdf'), document.getElementById('hintPdf')));
+    inputCsv.addEventListener('change', () => setFile(inputCsv, zoneCsv, document.getElementById('nameCsv'), document.getElementById('hintCsv')));
+
+    // Drag and drop
+    [zonePdf, zoneCsv].forEach(zone => {
+      zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+      zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.classList.remove('dragover');
+        const input = zone.querySelector('input[type="file"]');
+        const dt = new DataTransfer();
+        dt.items.add(e.dataTransfer.files[0]);
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change'));
+      });
+    });
+
+    // Procesar
+    btnProcesar.addEventListener('click', async () => {
+      const pdf = inputPdf.files[0];
+      const csv = inputCsv.files[0];
+      if (!pdf || !csv) return;
+
+      // Reset estado
+      document.getElementById('statusProcessing').style.display = 'flex';
+      document.getElementById('statusSuccess').style.display = 'none';
+      document.getElementById('statusError').style.display = 'none';
+      btnProcesar.disabled = true;
+      zipBlob = null;
+
+      const formData = new FormData();
+      formData.append('pdf', pdf);
+      formData.append('csv', csv);
+
+      try {
+        const res = await fetch('/procesar', {
+          method: 'POST',
+          body: formData
+        });
+
+        document.getElementById('statusProcessing').style.display = 'none';
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: 'Error desconocido' }));
+          document.getElementById('errorMsg').textContent = err.error || 'Error al procesar';
+          document.getElementById('statusError').style.display = 'flex';
+        } else {
+          zipBlob = await res.blob();
+          const contentDisp = res.headers.get('Content-Disposition') || '';
+          const match = contentDisp.match(/filename="(.+?)"/);
+          document.getElementById('btnDownload').dataset.filename = match ? match[1] : 'comprobantes.zip';
+          document.getElementById('successMsg').textContent = `✅ ZIP listo — ${(zipBlob.size / 1024).toFixed(0)} KB`;
+          document.getElementById('statusSuccess').style.display = 'flex';
+        }
+      } catch (err) {
+        document.getElementById('statusProcessing').style.display = 'none';
+        document.getElementById('errorMsg').textContent = err.message;
+        document.getElementById('statusError').style.display = 'flex';
+      }
+
+      btnProcesar.disabled = false;
+    });
+
+    // Descargar ZIP
+    document.getElementById('btnDownload').addEventListener('click', () => {
+      if (!zipBlob) return;
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = document.getElementById('btnDownload').dataset.filename || 'comprobantes.zip';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+
+</body>
+</html>
