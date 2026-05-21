@@ -10,14 +10,14 @@ const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
 async function procesarComprobantes(pdfBuffer, csvBuffer) {
   // ── 1. Parsear CSV ─────────────────────────────────────────────────────
   const csvText = csvBuffer.toString("latin1");
-  const records = parse(csvText, {
+const records = parse(csvText, {
     skip_empty_lines: true,
     columns: true,
     delimiter: ";",
-    quote: '"',
     relax_quotes: true,
+    relax_column_count: true,
     trim: true
-  });
+});
 
   // Mapa: nroRed → nroOperacion
   const redToOperacion = {};
