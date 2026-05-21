@@ -14,8 +14,7 @@ const records = parse(csvText, {
     skip_empty_lines: true,
     columns: true,
     delimiter: ";",
-    relax_quotes: true,
-    relax_column_count: true,
+    quote: false,
     trim: true
 });
 
